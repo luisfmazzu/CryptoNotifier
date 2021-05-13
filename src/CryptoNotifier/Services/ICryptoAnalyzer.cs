@@ -7,5 +7,6 @@ namespace CryptoNotifier.Services
 {
     public interface ICryptoAnalyzer
     {
+        public void InitializeClient();
     }
 }
