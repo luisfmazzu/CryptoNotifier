@@ -188,6 +188,23 @@ namespace CryptoNotifier.Services
         {
             string mailNotification = "";
 
+            DateTime currentTime = DateTime.Now;
+
+            mailNotification += currentTime.ToString("F", DateTimeFormatInfo.InvariantInfo) + "<br/><br/>";
+            mailNotification += "<u>PC1h = Percent change 1h // PC24h = Percent change 24h // PC7d = Percent change 7 days // PC30d = Percent Change 30 days // MC = Market cap</u> <br/><br/>";
+
+            foreach(Currency coin in currenciesToNotify)
+            {
+                mailNotification += "<b>Name:</b> " + coin.Name + " || ";
+                mailNotification += "<b>Symbol:</b> " + coin.Symbol + " || ";
+                mailNotification += "<b>PC1h:</b> " + coin.PercentChange1h.ToString("n2") + " || ";
+                mailNotification += "<b>PC24h:</b> " + coin.PercentChange24h.ToString("n2") + " || ";
+                mailNotification += "<b>PC7d:</b> " + coin.PercentChange7d.ToString("n2") + " || ";
+                mailNotification += "<b>PC30d:</b> " + coin.PercentChange30d.ToString("n2") + " || ";
+                mailNotification += "<b>MC:</b> " + coin.MarketCapUsd.ToString("n2");
+                mailNotification += "<br/>";
+            }
+
             return mailNotification;
         }
     }

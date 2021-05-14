@@ -24,8 +24,28 @@ namespace CryptoNotifier.Services
         public void Send(string subject, string message)
         {
             //Send email
-            smtpClient.Send("cryptonotifiersbros@gmail.com", "henrique.mazzu@gmail.com", subject, message);
-            smtpClient.Send("cryptonotifiersbros@gmail.com", "luisfmazzu@gmail.com", subject, message);
+            using (MailMessage mailMessage = new MailMessage("cryptonotifiersbros@gmail.com", "henrique.mazzu@gmail.com")
+            {
+                Subject = subject,
+                Body = message,
+                IsBodyHtml = true,
+                BodyEncoding = System.Text.Encoding.UTF8,
+
+            })
+            {
+                smtpClient.Send(mailMessage);
+            }
+            using (MailMessage mailMessage = new MailMessage("cryptonotifiersbros@gmail.com", "luisfmazzu@gmail.com")
+            {
+                Subject = subject,
+                Body = message,
+                IsBodyHtml = true,
+                BodyEncoding = System.Text.Encoding.UTF8,
+
+            })
+            {
+                smtpClient.Send(mailMessage);
+            }
         }
     }
 }
