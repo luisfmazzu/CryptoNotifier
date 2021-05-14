@@ -17,6 +17,7 @@ namespace CryptoNotifier.Models
         public double PercentChange7d { get; set; }
         public double PercentChange30d { get; set; }
         public Double MarketCapConvert { get; set; }
+        public bool ShitCoin { get; set; }
         public DateTime? LastModified { get; set; }
     }
 }

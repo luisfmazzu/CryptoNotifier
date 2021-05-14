@@ -19,6 +19,7 @@ namespace Common.Domains
         public double PercentChange30d { get; set; }
         public Double MarketCapConvert { get; set; }
         public string ConvertCurrency { get; set; }
+        public bool ShitCoin { get; set; }
         public DateTime? CreatedOn { get; set; }
         public DateTime? LastModified { get; set; }
     }

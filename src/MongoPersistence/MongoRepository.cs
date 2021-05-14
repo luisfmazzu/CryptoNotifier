@@ -37,8 +37,7 @@ namespace MongoPersistence
 
         public async Task<ICryptoDataDomain> GetCryptoDataByTickerSymbol(string tickerSymbol)
         {
-            string lowercaseTickerSymbol = tickerSymbol.ToLower();
-            var cryptoData = await _mongoCollection.Find<MongoCryptoDataDomain>(u => u.Symbol.Equals(lowercaseTickerSymbol)).FirstOrDefaultAsync();
+            var cryptoData = await _mongoCollection.Find<MongoCryptoDataDomain>(u => u.Symbol.Equals(tickerSymbol)).FirstOrDefaultAsync();
 
             return cryptoData;
         }
