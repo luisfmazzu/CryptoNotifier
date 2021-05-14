@@ -4,18 +4,24 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NoobsMuc.Coinmarketcap.Client;
+using MongoPersistence;
+using Common.Repositories;
+using Common.Domains;
+using CryptoNotifier.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CryptoNotifier.Services
 {
     public class CryptoAnalyzer : ICryptoAnalyzer
     {
-        public void InitializeClient()
+        private ICryptoDataRepository _cryptoDataRepository;
+        public void InitializeClient(ICryptoDataRepository cryptoDataRepository)
         {
-            Thread t = new Thread(AnalyzeCurrencies);
-            t.Start();
+            _cryptoDataRepository = cryptoDataRepository;
+            AnalyzeCurrencies();
         }
 
-        static void AnalyzeCurrencies()
+        private async void AnalyzeCurrencies()
         {
             ICoinmarketcapClient client = new CoinmarketcapClient("acb10e12-e8af-4251-8e68-70df0852289b");
             IMailService mailService = new MailService();
@@ -27,20 +33,106 @@ namespace CryptoNotifier.Services
                 // Algorithm for identifying potential data
                 List<Currency> currenciesToNotify = FindPotentialCoinsInBullishTrend(currencies);
 
-                // Verify if any found coin has already been notified in the last 24h
-                //TODO
-
                 if(currenciesToNotify.Count > 0)
                 {
-                    string mailMessage = AssembleMailNotification(currenciesToNotify);
-                    //mailService.Send("Irmãos ao Crypto - Bullish coins", mailMessage);
+                    // Verify if any found coin has already been notified in the last 24h
+                    currenciesToNotify = await RemoveCoinsWithExistingNotification(currenciesToNotify);
+
+                    // If there are still coins to be notified
+                    if (currenciesToNotify.Count > 0)
+                    {
+                        string mailMessage = AssembleMailNotification(currenciesToNotify);
+                        //mailService.Send("Irmãos ao Crypto - Bullish coins", mailMessage);
+
+                        // Update database with this notification
+                        await UpdateNotificationsAtDB(currenciesToNotify);
+                    }
                 }
 
                 Thread.Sleep(1800000);
             }
         }
 
-        private static List<Currency> FindPotentialCoinsInBullishTrend(IEnumerable<Currency> currencies)
+        private async Task<List<Currency>> RemoveCoinsWithExistingNotification(List<Currency> currenciesToNotify)
+        {
+            foreach(Currency coin in currenciesToNotify)
+            {
+                var coinInDB = await _cryptoDataRepository.GetCryptoDataByTickerSymbol(coin.Symbol);
+                if (coinInDB != null)
+                {
+                    // Verify date time
+                    DateTime currentTime = DateTime.Now;
+                    if(((DateTime)coinInDB.LastModified - currentTime).Days < 1)
+                    {
+                        currenciesToNotify.Remove(coin);
+                    }
+                }
+            }
+
+            return currenciesToNotify;
+        }
+
+        private async Task UpdateNotificationsAtDB(List<Currency> currenciesToNotify)
+        {
+            foreach (Currency coin in currenciesToNotify)
+            {
+                var coinInDB = await _cryptoDataRepository.GetCryptoDataByTickerSymbol(coin.Symbol);
+
+                // Create new coin
+                if (coinInDB == null)
+                {
+                    DateTime currentTime = DateTime.Now;
+                    CryptoDataForCreationDto cryptoData = new CryptoDataForCreationDto
+                    {
+                        CryptoId = coin.Id,
+                        Name = coin.Name,
+                        Symbol = coin.Symbol,
+                        Rank = coin.Rank,
+                        Price = coin.Price,
+                        Volume24hUsd = coin.Volume24hUsd,
+                        MarketCapUsd = coin.MarketCapUsd,
+                        PercentChange1h = coin.PercentChange1h,
+                        PercentChange24h = coin.PercentChange24h,
+                        PercentChange7d = coin.PercentChange7d,
+                        PercentChange30d = coin.PercentChange30d,
+                        MarketCapConvert = coin.MarketCapConvert,
+                        ConvertCurrency = coin.ConvertCurrency,
+                        CreatedOn = currentTime,
+                        LastModified = currentTime
+                    };
+
+                    var coinInDBToBeCreated = Startup.Mapper.Map<ICryptoDataDomain>(cryptoData);
+
+                    await _cryptoDataRepository.InsertCryptoData(coinInDBToBeCreated);
+                }
+                // Update existing coin
+                else
+                {
+                    DateTime currentTime = DateTime.Now;
+                    CryptoDataForUpdateDto cryptoData = new CryptoDataForUpdateDto
+                    {
+                        Rank = coin.Rank,
+                        Price = coin.Price,
+                        Volume24hUsd = coin.Volume24hUsd,
+                        MarketCapUsd = coin.MarketCapUsd,
+                        PercentChange1h = coin.PercentChange1h,
+                        PercentChange24h = coin.PercentChange24h,
+                        PercentChange7d = coin.PercentChange7d,
+                        PercentChange30d = coin.PercentChange30d,
+                        MarketCapConvert = coin.MarketCapConvert,
+                        LastModified = currentTime
+                    };
+
+                    var coinInDBToBeUpdated = Startup.Mapper.Map<ICryptoDataDomain>(cryptoData);
+
+                    await _cryptoDataRepository.UpdateCryptoData(coin.Symbol, coinInDBToBeUpdated);
+                }
+            }
+
+            return;
+        }
+
+        private List<Currency> FindPotentialCoinsInBullishTrend(IEnumerable<Currency> currencies)
         {
             List<Currency> bullishCoins = new List<Currency>();
 
@@ -92,7 +184,7 @@ namespace CryptoNotifier.Services
             return bullishCoins;
         }
 
-        private static string AssembleMailNotification(List<Currency> currenciesToNotify)
+        private string AssembleMailNotification(List<Currency> currenciesToNotify)
         {
             string mailNotification = "";
 

@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace Common.Domains
+namespace CryptoNotifier.Models
 {
-    public class ICryptoDataDomain
+    public class CryptoDataForCreationDto
     {
         public string CryptoId { get; set; }
         public string Name { get; set; }

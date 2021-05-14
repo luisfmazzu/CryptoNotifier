@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace Common.Domains
+namespace CryptoNotifier.Models
 {
-    public class ICryptoDataDomain
+    public class CryptoDataForUpdateDto
     {
-        public string CryptoId { get; set; }
-        public string Name { get; set; }
         public string Symbol { get; set; }
         public string Rank { get; set; }
         public double Price { get; set; }
@@ -18,8 +17,6 @@ namespace Common.Domains
         public double PercentChange7d { get; set; }
         public double PercentChange30d { get; set; }
         public Double MarketCapConvert { get; set; }
-        public string ConvertCurrency { get; set; }
-        public DateTime? CreatedOn { get; set; }
         public DateTime? LastModified { get; set; }
     }
 }

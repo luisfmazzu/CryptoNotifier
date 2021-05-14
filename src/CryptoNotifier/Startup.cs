@@ -17,6 +17,7 @@ using Microsoft.OpenApi.Models;
 using Common.Repositories;
 using Common.Domains;
 using CryptoNotifier.Services;
+using CryptoNotifier.Models;
 
 namespace CryptoNotifier
 {
@@ -62,7 +63,9 @@ namespace CryptoNotifier
             });
 
             CryptoAnalyzer cryptoAnalyzer = new CryptoAnalyzer();
-            cryptoAnalyzer.InitializeClient();
+            MongoDbManager mongoDbManager = new MongoDbManager(Configuration);
+            CryptoDataRepository cryptoDataRepository = new CryptoDataRepository(mongoDbManager);
+            cryptoAnalyzer.InitializeClient(cryptoDataRepository);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -87,7 +90,9 @@ namespace CryptoNotifier
             var config = new MapperConfiguration(configuration =>
             {
                 configuration.AllowNullCollections = true;
-                //configuration.CreateMap<ICryptoDataDomain, HistoricalFiiDto>();
+                configuration.CreateMap<ICryptoDataDomain, CryptoDataDto>();
+                configuration.CreateMap<CryptoDataForCreationDto, ICryptoDataDomain>();
+                configuration.CreateMap<CryptoDataForUpdateDto, ICryptoDataDomain>();
             });
 
             Mapper = config.CreateMapper();

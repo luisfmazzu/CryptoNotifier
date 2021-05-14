@@ -24,7 +24,6 @@ namespace CryptoNotifier.Controllers
                 _logger = logger;
                 _cryptoDataRepository = cryptoDataPersistenceService;
                 _cryptoAnalyzer = cryptoAnalyzer;
-                _cryptoAnalyzer.InitializeClient();
             }
         }
 }

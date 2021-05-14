@@ -30,7 +30,7 @@ namespace MongoPersistence
 
         public async Task<ICryptoDataDomain> GetCryptoDataById(string cryptoDataId)
         {
-            var cryptoData = await _mongoCollection.Find<MongoCryptoDataDomain>(u => u.CryptoID.Equals(cryptoDataId)).FirstOrDefaultAsync();
+            var cryptoData = await _mongoCollection.Find<MongoCryptoDataDomain>(u => u.CryptoId.Equals(cryptoDataId)).FirstOrDefaultAsync();
 
             return cryptoData;
         }
@@ -38,7 +38,7 @@ namespace MongoPersistence
         public async Task<ICryptoDataDomain> GetCryptoDataByTickerSymbol(string tickerSymbol)
         {
             string lowercaseTickerSymbol = tickerSymbol.ToLower();
-            var cryptoData = await _mongoCollection.Find<MongoCryptoDataDomain>(u => u.CryptoTickerSymbol.Equals(lowercaseTickerSymbol)).FirstOrDefaultAsync();
+            var cryptoData = await _mongoCollection.Find<MongoCryptoDataDomain>(u => u.Symbol.Equals(lowercaseTickerSymbol)).FirstOrDefaultAsync();
 
             return cryptoData;
         }
@@ -54,7 +54,7 @@ namespace MongoPersistence
             var mongoCryptoDataDomain = (MongoCryptoDataDomain)cryptoDataDomain;
             mongoCryptoDataDomain.LastModified = DateTime.UtcNow;
 
-            var updatedCryptoData = await _mongoCollection.ReplaceOneAsync<MongoCryptoDataDomain>(u => u.CryptoTickerSymbol.Equals(tickerSymbol), mongoCryptoDataDomain, new ReplaceOptions { IsUpsert = true });
+            var updatedCryptoData = await _mongoCollection.ReplaceOneAsync<MongoCryptoDataDomain>(u => u.Symbol.Equals(tickerSymbol), mongoCryptoDataDomain, new ReplaceOptions { IsUpsert = true });
         }
 
         public async Task DeleteCryptoData(string cryptoDataTicker)
