@@ -18,13 +18,15 @@ namespace CryptoNotifier.Services
         static void AnalyzeCurrencies()
         {
             ICoinmarketcapClient client;
-
+            // teste email
+            IMailService mailService = new MailService();
+            mailService.Send("Teste obj", "testee");
             while (true)
             {
                 client = new CoinmarketcapClient("acb10e12-e8af-4251-8e68-70df0852289b");
                 IEnumerable<Currency> currencies = client.GetCurrencies(3000, "USD");
 
-                Thread.Sleep(30000);
+                Thread.Sleep(1800000);
             }
             
         }
