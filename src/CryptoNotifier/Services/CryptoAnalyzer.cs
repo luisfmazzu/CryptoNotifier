@@ -172,8 +172,8 @@ namespace CryptoNotifier.Services
                     maxPercentChange7d = 30;
                     maxPercentChange30d = 35;
                 }
-                // Less than 5.000.000
-                else 
+                // Less than 5.000.000 and more than 1.000.000
+                else  if(coin.MarketCapUsd > 1000000)
                 {
                     expectedPercentChange24h = 80;
                     maxPercentChange7d = 40;
