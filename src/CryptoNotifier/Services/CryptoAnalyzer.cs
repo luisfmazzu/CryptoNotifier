@@ -148,10 +148,11 @@ namespace CryptoNotifier.Services
 
             foreach(Currency coin in currencies)
             {
-                double expectedPercentChange1h = 999;
-                double expectedPercentChange24h = 999;
-                double maxPercentChange7d = 999;
-                double maxPercentChange30d = 999;
+                double expectedPercentChange1h = 0;
+                double expectedPercentChange24h = 0;
+                double maxPercentChange7d = 0;
+                double maxPercentChange30d = 0;
+                double minMarketCap = 1000000;
 
                 // Algorithm depends on market cap
                 // Market cap > 1.000.000.000
@@ -176,8 +177,8 @@ namespace CryptoNotifier.Services
                     maxPercentChange7d = 30;
                     maxPercentChange30d = 35;
                 }
-                // Less than 5.000.000 and more than 1.000.000
-                else  if(coin.MarketCapUsd > 1000000)
+                // Less than 5.000.000 and more than minMarketCap
+                else if (coin.MarketCapUsd > minMarketCap)
                 {
                     expectedPercentChange1h = 30;
                     expectedPercentChange24h = 80;
@@ -189,10 +190,12 @@ namespace CryptoNotifier.Services
                 // Algorithm 1
                 // Condition 1: Percent change of last 24h is higher then predefined values
                 // Condition 2: The percent change of the last 7 days must be low to indicate there was not much movement at the market for that coin (negative or positive)
-                // Condition 2: The percent change of the last month must not be too negative in order to not indicate high manipulation
+                // Condition 3: The percent change of the last month must not be too negative in order to not indicate high manipulation
+                // Condition 4: Market cap is not too low
                 if (coin.PercentChange24h > expectedPercentChange24h &&
                     Math.Abs(coin.PercentChange7d) < maxPercentChange7d &&
-                    Math.Abs(coin.PercentChange30d) < maxPercentChange30d)
+                    Math.Abs(coin.PercentChange30d) < maxPercentChange30d &&
+                    coin.MarketCapUsd > minMarketCap)
                 {
                     bullishCoins.Add(coin);
                     coinHasBeenAlreadyAdded = true;
@@ -201,11 +204,14 @@ namespace CryptoNotifier.Services
                 // Algorithm 2
                 // Condition 1: Percent change of last 1h is higher then predefined values
                 // Condition 2: The percent change of the last 7 days must be low to indicate there was not much movement at the market for that coin (negative or positive)
-                // Condition 2: The percent change of the last month must not be too negative in order to not indicate high manipulation
+                // Condition 3: The percent change of the last month must not be too negative in order to not indicate high manipulation
+                // Condition 4: Coin has not been added already
+                // Condition 5: Market cap is not too low
                 if (coin.PercentChange1h >= expectedPercentChange1h &&
                     Math.Abs(coin.PercentChange7d) <= maxPercentChange7d &&
                     Math.Abs(coin.PercentChange30d) <= maxPercentChange30d &&
-                    !coinHasBeenAlreadyAdded)
+                    !coinHasBeenAlreadyAdded &&
+                    coin.MarketCapUsd > minMarketCap)
                 {
                     bullishCoins.Add(coin);
                 }
