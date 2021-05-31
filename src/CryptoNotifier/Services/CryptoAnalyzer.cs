@@ -31,7 +31,7 @@ namespace CryptoNotifier.Services
             {
                 DateTime currentTime = DateTime.Now;
 
-                IEnumerable<Currency> currencies = client.GetCurrencies(3000, "USD");
+                IEnumerable<Currency> currencies = client.GetCurrencies(1500, "USD");
 
                 // Algorithm for identifying potential data
                 List<Currency> currenciesToNotify = FindPotentialCoinsInBullishTrend(currencies);
@@ -45,14 +45,14 @@ namespace CryptoNotifier.Services
                     if (currenciesToNotify.Count > 0)
                     {
                         string mailMessage = AssembleMailNotification(currenciesToNotify);
-                        mailService.Send("Irmãos ao Crypto - " + currenciesToNotify.Count + " NEW Bullish coins", mailMessage);
+                        mailService.Send("Irmãos ao Crypto - NEW Bullish coins", mailMessage);
 
                         // Update database with this notification
                         await UpdateNotificationsAtDB(currenciesToNotify);
                     }
                 }
 
-                Thread.Sleep(7200000);
+                Thread.Sleep(4000000);
             }
         }
 
