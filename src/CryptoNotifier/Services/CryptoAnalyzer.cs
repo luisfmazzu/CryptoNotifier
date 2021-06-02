@@ -16,9 +16,11 @@ namespace CryptoNotifier.Services
     public class CryptoAnalyzer : ICryptoAnalyzer
     {
         private ICryptoDataRepository _cryptoDataRepository;
-        public void InitializeClient(ICryptoDataRepository cryptoDataRepository)
+        private ICryptoTradingSimulationRepository _cryptoTradingSimulationRepository;
+        public void InitializeClient(ICryptoDataRepository cryptoDataRepository, ICryptoTradingSimulationRepository cryptoTradingSimulationRepository)
         {
             _cryptoDataRepository = cryptoDataRepository;
+            _cryptoTradingSimulationRepository = cryptoTradingSimulationRepository;
             AnalyzeCurrencies();
         }
 
@@ -33,10 +35,13 @@ namespace CryptoNotifier.Services
 
                 IEnumerable<Currency> currencies = client.GetCurrencies(1500, "USD");
 
+                // Verify if there were any gains at crypto trading simulation
+                await VerifyCryptoTradingSimulation(currencies);
+
                 // Algorithm for identifying potential data
                 List<Currency> currenciesToNotify = FindPotentialCoinsInBullishTrend(currencies);
 
-                if(currenciesToNotify.Count > 0)
+                if (currenciesToNotify.Count > 0)
                 {
                     // Verify if any found coin has already been notified in the last 24h
                     currenciesToNotify = await RemoveCoinsWithExistingNotification(currenciesToNotify);
@@ -44,6 +49,9 @@ namespace CryptoNotifier.Services
                     // If there are still coins to be notified
                     if (currenciesToNotify.Count > 0)
                     {
+                        // Update database with new coins for simulation
+                        await AddCryptoTradingSimulationsAtDB(currenciesToNotify);
+
                         string mailMessage = AssembleMailNotification(currenciesToNotify);
                         mailService.Send("Irmãos ao Crypto - NEW Bullish coins", mailMessage);
 
@@ -66,7 +74,7 @@ namespace CryptoNotifier.Services
                 {
                     // Verify date time and if it is a shit coin (determined by the user)
                     DateTime currentTime = DateTime.Now;
-                    if(((DateTime)coinInDB.LastModified - currentTime).Days >= 1 && coinInDB.ShitCoin == false)
+                    if (((DateTime)coinInDB.LastModified - currentTime).Days >= 1 && coinInDB.ShitCoin == false)
                     {
                         currenciesToNotify.Add(coin);
                     }
@@ -146,7 +154,7 @@ namespace CryptoNotifier.Services
         {
             List<Currency> bullishCoins = new List<Currency>();
 
-            foreach(Currency coin in currencies)
+            foreach (Currency coin in currencies)
             {
                 double expectedPercentChange1h = 0;
                 double expectedPercentChange24h = 0;
@@ -158,22 +166,22 @@ namespace CryptoNotifier.Services
                 // Market cap > 1.000.000.000
                 if (coin.MarketCapUsd > 1000000000)
                 {
-                    expectedPercentChange1h = 10;
-                    expectedPercentChange24h = 25;
+                    expectedPercentChange1h = 8;
+                    expectedPercentChange24h = 20;
                     maxPercentChange7d = 20;
                     maxPercentChange30d = 25;
                 }
                 else if (coin.MarketCapUsd > 100000000)
                 {
-                    expectedPercentChange1h = 15;
-                    expectedPercentChange24h = 35;
+                    expectedPercentChange1h = 13;
+                    expectedPercentChange24h = 30;
                     maxPercentChange7d = 25;
                     maxPercentChange30d = 30;
                 }
                 else if (coin.MarketCapUsd > 5000000)
                 {
-                    expectedPercentChange1h = 20;
-                    expectedPercentChange24h = 60;
+                    expectedPercentChange1h = 18;
+                    expectedPercentChange24h = 55;
                     maxPercentChange7d = 30;
                     maxPercentChange30d = 35;
                 }
@@ -229,7 +237,7 @@ namespace CryptoNotifier.Services
             mailNotification += currentTime.ToString("F", DateTimeFormatInfo.InvariantInfo) + "<br/><br/>";
             mailNotification += "<u>PC1h = Percent change 1h // PC24h = Percent change 24h // PC7d = Percent change 7 days // PC30d = Percent Change 30 days // MC = Market cap</u> <br/><br/>";
 
-            foreach(Currency coin in currenciesToNotify)
+            foreach (Currency coin in currenciesToNotify)
             {
                 mailNotification += "<b>Name:</b> " + coin.Name + " || ";
                 mailNotification += "<b>Symbol:</b> " + coin.Symbol + " || ";
@@ -242,6 +250,94 @@ namespace CryptoNotifier.Services
             }
 
             return mailNotification;
+        }
+
+        private async Task AddCryptoTradingSimulationsAtDB(List<Currency> newCurrencies)
+        {
+            foreach(Currency coin in newCurrencies)
+            {
+                DateTime currentTime = DateTime.Now;
+                var simulationId = Guid.NewGuid();
+                CryptoTradingSimulationForCreationDto cryptoTradingSimulation = new CryptoTradingSimulationForCreationDto
+                {
+                    SimulationId = simulationId.ToString(),
+                    CryptoId = coin.Id,
+                    Name = coin.Name,
+                    Symbol = coin.Symbol,
+                    EntryPrice = coin.Price,
+                    EntryDateTime = currentTime,
+                    IsSimulating = true,
+                    CreatedOn = currentTime,
+                    LastModified = currentTime
+                };
+
+                var coinInDBToBeCreated = Startup.Mapper.Map<ICryptoTradingSimulationDomain>(cryptoTradingSimulation);
+
+                await _cryptoTradingSimulationRepository.InsertCryptoTradingSimulation(coinInDBToBeCreated);
+            }
+        }
+
+        private async Task VerifyCryptoTradingSimulation(IEnumerable<Currency> currencies)
+        {
+            var functionalTradingSimulations = await _cryptoTradingSimulationRepository.GetAllFunctionalCryptoTradingSimulation();
+            DateTime currentTime = DateTime.Now;
+
+            foreach (var tradingSimulation in functionalTradingSimulations)
+            {
+                var currency = currencies.Where(x => x.Id == tradingSimulation.CryptoId).First();
+
+                if(currency.Price >= tradingSimulation.EntryPrice * 1.1)
+                {
+                    var tradingSimulationForUpdate = new CryptoTradingSimulationForUpdateDto()
+                    {
+                        TenPercentGainDateTime = tradingSimulation.TenPercentGainDateTime,
+                        TwentyPercentGainDateTime = tradingSimulation.TwentyPercentGainDateTime,
+                        ThirtyPercentGainDateTime = tradingSimulation.ThirtyPercentGainDateTime,
+                        IsSimulating = tradingSimulation.IsSimulating,
+                        PriceAfterOneMonth = tradingSimulation.PriceAfterOneMonth
+                    };
+                    bool update = false;
+
+                    if (tradingSimulation.TenPercentGainDateTime != null)
+                    {
+                        tradingSimulationForUpdate.TenPercentGainDateTime = currentTime;
+                        update = true;
+                    }
+                    if(currency.Price >= tradingSimulation.EntryPrice * 1.2 && tradingSimulation.TwentyPercentGainDateTime != null)
+                    {
+                        tradingSimulationForUpdate.TwentyPercentGainDateTime = currentTime;
+                        update = true;
+                    }
+                    if (currency.Price >= tradingSimulation.EntryPrice * 1.3 && tradingSimulation.ThirtyPercentGainDateTime != null)
+                    {
+                        tradingSimulationForUpdate.ThirtyPercentGainDateTime = currentTime;
+                        tradingSimulationForUpdate.IsSimulating = false;
+                        update = true;
+                    }
+
+                    if(update)
+                    { 
+                        var coinInDBToBeUpdated = Startup.Mapper.Map<ICryptoTradingSimulationDomain>(tradingSimulationForUpdate);
+
+                        await _cryptoTradingSimulationRepository.UpdateCryptoTradingSimulation(tradingSimulation.SimulationId, coinInDBToBeUpdated);
+                    }
+                }
+                else if((tradingSimulation.EntryDateTime - currentTime).Days > 30)
+                {
+                    var tradingSimulationForUpdate = new CryptoTradingSimulationForUpdateDto()
+                    {
+                        TenPercentGainDateTime = tradingSimulation.TenPercentGainDateTime,
+                        TwentyPercentGainDateTime = tradingSimulation.TwentyPercentGainDateTime,
+                        ThirtyPercentGainDateTime = tradingSimulation.ThirtyPercentGainDateTime,
+                        IsSimulating = tradingSimulation.IsSimulating,
+                        PriceAfterOneMonth = currency.Price
+                    };
+
+                    var coinInDBToBeUpdated = Startup.Mapper.Map<ICryptoTradingSimulationDomain>(tradingSimulationForUpdate);
+
+                    await _cryptoTradingSimulationRepository.UpdateCryptoTradingSimulation(tradingSimulation.SimulationId, coinInDBToBeUpdated);
+                }
+            }
         }
     }
 }

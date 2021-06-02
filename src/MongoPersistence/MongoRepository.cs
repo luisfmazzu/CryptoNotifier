@@ -72,4 +72,73 @@ namespace MongoPersistence
             return cryptoDatasList;
         }
     }
+
+
+    public class CryptoTradingSimulationRepository : ICryptoTradingSimulationRepository
+    {
+        private readonly IMongoCollection<MongoCryptoTradingSimulationDomain> _mongoCollection;
+        public static IMapper Mapper { get; internal set; }
+
+        public CryptoTradingSimulationRepository(MongoDbManager mongoDbManager)
+        {
+            _mongoCollection = mongoDbManager.GetCollection<MongoCryptoTradingSimulationDomain>("CryptoTradingSimulationDomain");
+
+            var config = new MapperConfiguration(configuration =>
+            {
+                configuration.AllowNullCollections = true;
+                configuration.CreateMap<ICryptoTradingSimulationDomain, MongoCryptoTradingSimulationDomain>();
+                configuration.CreateMap<List<ICryptoTradingSimulationDomain>, List<MongoCryptoTradingSimulationDomain>>();
+            });
+
+            Mapper = config.CreateMapper();
+        }
+
+        public async Task<ICryptoTradingSimulationDomain> GetCryptoTradingSimulationById(string simulationId)
+        {
+            var cryptoTradingSimulation = await _mongoCollection.Find<MongoCryptoTradingSimulationDomain>(u => u.SimulationId.Equals(simulationId)).FirstOrDefaultAsync();
+
+            return cryptoTradingSimulation;
+        }
+
+        public async Task InsertCryptoTradingSimulation(ICryptoTradingSimulationDomain cryptoTradingSimulationDomain)
+        {
+            var mongoCryptoTradingSimulationDomain = Mapper.Map<MongoCryptoTradingSimulationDomain>(cryptoTradingSimulationDomain);
+            await _mongoCollection.InsertOneAsync(mongoCryptoTradingSimulationDomain);
+        }
+
+        public async Task UpdateCryptoTradingSimulation(string simulationId, ICryptoTradingSimulationDomain cryptoTradingSimulationDomain)
+        {
+            var mongoCryptoTradingSimulationDomain = (MongoCryptoTradingSimulationDomain)cryptoTradingSimulationDomain;
+            mongoCryptoTradingSimulationDomain.LastModified = DateTime.UtcNow;
+
+            var updatedCryptoTradingSimulation = await _mongoCollection.ReplaceOneAsync<MongoCryptoTradingSimulationDomain>(u => u.SimulationId.Equals(simulationId), mongoCryptoTradingSimulationDomain, new ReplaceOptions { IsUpsert = true });
+        }
+
+        public async Task DeleteCryptoTradingSimulation(string cryptoTradingSimulationTicker)
+        {
+
+        }
+
+        public async Task<List<ICryptoTradingSimulationDomain>> GetAllCryptoTradingSimulation()
+        {
+            List<MongoCryptoTradingSimulationDomain> cryptoTradingSimulations = await _mongoCollection.Find<MongoCryptoTradingSimulationDomain>(_ => true).ToListAsync();
+            List<ICryptoTradingSimulationDomain> cryptoTradingSimulationsList = new List<ICryptoTradingSimulationDomain>();
+            foreach (MongoCryptoTradingSimulationDomain cryptoTradingSimulation in cryptoTradingSimulations)
+            {
+                cryptoTradingSimulationsList.Add(cryptoTradingSimulation);
+            }
+            return cryptoTradingSimulationsList;
+        }
+
+        public async Task<List<ICryptoTradingSimulationDomain>> GetAllFunctionalCryptoTradingSimulation()
+        {
+            List<MongoCryptoTradingSimulationDomain> functionalCryptoTradingSimulations = await _mongoCollection.Find<MongoCryptoTradingSimulationDomain>(x => x.IsSimulating == true).ToListAsync();
+            List<ICryptoTradingSimulationDomain> cryptoTradingSimulationsList = new List<ICryptoTradingSimulationDomain>();
+            foreach (MongoCryptoTradingSimulationDomain cryptoTradingSimulation in functionalCryptoTradingSimulations)
+            {
+                cryptoTradingSimulationsList.Add(cryptoTradingSimulation);
+            }
+            return cryptoTradingSimulationsList;
+        }
+    }
 }

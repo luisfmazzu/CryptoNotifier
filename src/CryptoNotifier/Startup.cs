@@ -41,6 +41,7 @@ namespace CryptoNotifier
 
             services.AddSingleton<MongoDbManager>();
             services.AddSingleton<ICryptoDataRepository, CryptoDataRepository>();
+            services.AddSingleton<ICryptoTradingSimulationRepository, CryptoTradingSimulationRepository>();
             services.AddSingleton<IMailService, MailService>();
             services.AddSingleton<ICryptoAnalyzer, CryptoAnalyzer>();
 
@@ -65,7 +66,8 @@ namespace CryptoNotifier
             CryptoAnalyzer cryptoAnalyzer = new CryptoAnalyzer();
             MongoDbManager mongoDbManager = new MongoDbManager(Configuration);
             CryptoDataRepository cryptoDataRepository = new CryptoDataRepository(mongoDbManager);
-            cryptoAnalyzer.InitializeClient(cryptoDataRepository);
+            CryptoTradingSimulationRepository cryptoTradingSimulationRepository = new CryptoTradingSimulationRepository(mongoDbManager);
+            cryptoAnalyzer.InitializeClient(cryptoDataRepository, cryptoTradingSimulationRepository);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -93,6 +95,9 @@ namespace CryptoNotifier
                 configuration.CreateMap<ICryptoDataDomain, CryptoDataDto>();
                 configuration.CreateMap<CryptoDataForCreationDto, ICryptoDataDomain>();
                 configuration.CreateMap<CryptoDataForUpdateDto, ICryptoDataDomain>();
+                configuration.CreateMap<ICryptoTradingSimulationDomain, CryptoTradingSimulationDto>();
+                configuration.CreateMap<CryptoTradingSimulationForCreationDto, ICryptoTradingSimulationDomain>();
+                configuration.CreateMap<CryptoTradingSimulationForUpdateDto, ICryptoTradingSimulationDomain>();
             });
 
             Mapper = config.CreateMapper();
