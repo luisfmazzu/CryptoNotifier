@@ -18,6 +18,7 @@ using Common.Repositories;
 using Common.Domains;
 using CryptoNotifier.Services;
 using CryptoNotifier.Models;
+using MongoPersistence.MongoPersistence;
 
 namespace CryptoNotifier
 {
@@ -65,7 +66,11 @@ namespace CryptoNotifier
             CryptoAnalyzer cryptoAnalyzer = new CryptoAnalyzer();
             MongoDbManager mongoDbManager = new MongoDbManager(Configuration);
             CryptoDataRepository cryptoDataRepository = new CryptoDataRepository(mongoDbManager);
-            cryptoAnalyzer.InitializeClient(cryptoDataRepository);
+            WalletAlertsRepository walletAlertsRepository = new WalletAlertsRepository(mongoDbManager);
+            TokenHistoryRepository tokenHistoryRepository = new TokenHistoryRepository(mongoDbManager);
+            TwilioPhoneCallService phoneCallService = new TwilioPhoneCallService(Configuration);
+            IMailService mailService = new MailService(Configuration);
+            cryptoAnalyzer.InitializeClient(cryptoDataRepository, mailService, phoneCallService, walletAlertsRepository, tokenHistoryRepository);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

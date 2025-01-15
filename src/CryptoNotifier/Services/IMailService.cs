@@ -7,6 +7,6 @@ namespace CryptoNotifier.Services
 {
     public interface IMailService
     {
-        void Send(string subject, string message);
+        Task SendMail(string subject, string message, HashSet<string> sendEmailList = null);
     }
 }

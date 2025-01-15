@@ -1,13 +1,13 @@
-﻿using System;
+﻿using Common.Domains;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson;
+using System;
 using System.Collections.Generic;
 using System.Text;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
-using Common.Domains;
 
 namespace MongoPersistence.Domains
 {
-    public class MongoCryptoDataDomain : ICryptoDataDomain
+    public class MongoWalletAlertsDto : WalletAlertsDto
     {
         [BsonId]
         [BsonIgnoreIfDefault]

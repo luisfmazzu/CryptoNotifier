@@ -1,85 +1,82 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Net.Mail;
 using System.Net;
-using System.Net.Mail;
+using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
+using System;
+using Microsoft.AspNetCore.Http;
+using System.Linq;
+using System.Collections.Generic;
+using CryptoNotifier.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace CryptoNotifier.Services
 {
-    public class MailService : IMailService
+    public class MailSettings
     {
-        private SmtpClient smtpClient;
+        public string Host { get; set; }
+        public int Port { get; set; }
+        public string ServiceProviderName { get; set; }
+        public string UserName { get; set; }
+        public string Password { get; set; }
+    }
 
-        public MailService()
+    public class MailService: IMailService
+    {
+        SmtpClient _client;
+        SmtpClient _announcementsClient;
+        MailSettings _mailSettings;
+        private const int JwtTokenIndexFromHeader = 1;
+        private bool testEmailOnly = false;
+
+        public MailService(IConfiguration configuration)
         {
-            smtpClient = new SmtpClient("smtp.gmail.com")
+            _mailSettings = new MailSettings()
             {
-                Port = 587,
-                Credentials = new NetworkCredential("cryptonotifierbros@gmail.com", "cryptonotifier123"),
-                EnableSsl = true,
+                Host = configuration["host"],
+                Port = Convert.ToInt32(configuration["port"]),
+                ServiceProviderName = configuration["serviceProviderName"],
+                UserName = configuration["mailUserName"],
+                Password = configuration["password"],
             };
+
+            _client = new SmtpClient(_mailSettings.Host, _mailSettings.Port);
+            _client.UseDefaultCredentials = false;
+            _client.TargetName = _mailSettings.ServiceProviderName;
+            _client.EnableSsl = true;
+            _client.Credentials = new NetworkCredential(_mailSettings.UserName, _mailSettings.Password);
+            _client.DeliveryMethod = SmtpDeliveryMethod.Network;
+
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
         }
 
-        public void Send(string subject, string message)
+        public async Task SendMail(string subject, string message, HashSet<string> sendEmailList = null)
         {
-            int tryAgain = 10;
-            bool failed = false;
-
-            do
+            if(sendEmailList == null || testEmailOnly)
+            {
+                sendEmailList = new HashSet<string>()
+                {
+                    "luisfmazzu@gmail.com"
+                };
+            }
+            foreach (string email in sendEmailList) 
             {
                 try
                 {
-                    failed = false;
-
-                    var smtp = new SmtpClient("smtp.gmail.com")
-                    {
-                        Port = 587,
-                        Credentials = new NetworkCredential("cryptonotifierbros@gmail.com", "cryptonotifier123"),
-                        EnableSsl = true,
-                    };
-                    var mail = new MailMessage("cryptonotifiersbros@gmail.com", "henrique.mazzu@gmail.com");
-                    mail.Subject = subject;
-                    mail.Body = message;
-                    mail.IsBodyHtml = true;
-                    smtp.Send(mail);
+                    MailAddress from = new MailAddress(_mailSettings.UserName, String.Empty, Encoding.UTF8);
+                    MailAddress to = new MailAddress(email);
+                    MailMessage sendMessage = new MailMessage(from, to);
+                    sendMessage.Body = message;
+                    sendMessage.BodyEncoding = Encoding.UTF8;
+                    sendMessage.Subject = subject;
+                    sendMessage.SubjectEncoding = Encoding.UTF8;
+                    sendMessage.IsBodyHtml = true;
+                    await _client.SendMailAsync(sendMessage);
                 }
                 catch (Exception ex)
                 {
-                    failed = true;
-                    tryAgain--;
-                    var exception = ex.Message.ToString();
                 }
-            } while (failed && tryAgain != 0);
-
-            tryAgain = 10;
-            failed = false;
-
-            do
-            {
-                try
-                {
-                    failed = false;
-
-                    var smtp = new SmtpClient("smtp.gmail.com")
-                    {
-                        Port = 587,
-                        Credentials = new NetworkCredential("cryptonotifierbros@gmail.com", "cryptonotifier123"),
-                        EnableSsl = true,
-                    };
-                    var mail = new MailMessage("cryptonotifiersbros@gmail.com", "luisfmazzu@gmail.com");
-                    mail.Subject = subject;
-                    mail.Body = message;
-                    mail.IsBodyHtml = true;
-                    smtp.Send(mail);
-                }
-                catch (Exception ex)
-                {
-                    failed = true;
-                    tryAgain--;
-                    var exception = ex.Message.ToString();
-                }
-            } while (failed && tryAgain != 0);
+            }
         }
     }
 }

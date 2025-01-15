@@ -49,7 +49,10 @@ namespace NoobsMuc.Coinmarketcap.Client
             {
                 {"slug", string.Join(",", slugList.Select(item => item.ToLower()))}
             };
- 
+
+            if (string.IsNullOrEmpty(convertCurrency))
+                convertCurrency = "USD";
+
             var client = GetWebApiClient(UrlPartItem, ref convertCurrency, queryArguments);
             var result = client.MakeRequest(Method.GET, convertCurrency, true);
 

@@ -8,6 +8,6 @@ namespace CryptoNotifier.Services
 {
     public interface ICryptoAnalyzer
     {
-        public void InitializeClient(ICryptoDataRepository cryptoDataRepository);
+        public void InitializeClient(ICryptoDataRepository cryptoDataRepository, IMailService mailService, IPhoneCallService phoneCallService, IWalletAlertsRepository walletAlertsRepository, ITokenHistoryRepository tokenHistoryRepository);
     }
 }
